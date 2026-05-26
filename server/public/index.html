@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>YT Sync</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0f0f1a;
+      --surface: #1a1a2e;
+      --border: #2a2a4a;
+      --accent: #e94560;
+      --accent-hover: #d63851;
+      --text: #e0e0e0;
+      --muted: #888;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    .app {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--accent);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      transition: background 0.3s;
+    }
+
+    .status-dot.connected { background: #0cce6b; }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 20px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    input, button {
+      font-family: inherit;
+      font-size: 15px;
+      border: none;
+      outline: none;
+      border-radius: 8px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      transition: border-color 0.2s;
+    }
+
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: #555; }
+
+    .btn {
+      padding: 12px 20px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .btn-secondary:hover { background: rgba(233, 69, 96, 0.1); }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+
+    .btn-sm {
+      padding: 8px 16px;
+      font-size: 13px;
+      width: auto;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .input-group input { flex: 1; }
+    .input-group .btn { width: auto; }
+
+    .room-display {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .room-code {
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: 8px;
+      color: var(--accent);
+      font-family: "SF Mono", "Fira Code", monospace;
+    }
+
+    .room-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+
+    .role-badge.dj { background: var(--accent); color: white; }
+    .role-badge.listener { background: var(--border); color: var(--muted); }
+
+    .member-count {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .player-section {
+      width: 100%;
+    }
+
+    .player-wrapper {
+      position: relative;
+      width: 100%;
+      padding-bottom: 56.25%;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .player-wrapper iframe,
+    .player-wrapper #ytplayer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .player-placeholder {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    .player-placeholder svg {
+      width: 48px;
+      height: 48px;
+      opacity: 0.5;
+    }
+
+    .url-input-section {
+      margin-top: 16px;
+    }
+
+    .now-playing {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .now-playing .title {
+      color: var(--text);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toast {
+      background: var(--surface);
+      color: var(--text);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      border: 1px solid var(--accent);
+      animation: fadeIn 0.3s, fadeOut 0.3s 2.2s forwards;
+      white-space: nowrap;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 600px) {
+      .main { padding: 12px; gap: 12px; }
+      .card { padding: 16px; }
+      .room-code { font-size: 36px; letter-spacing: 6px; }
+      .input-group { flex-direction: column; }
+      .input-group .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>YT Sync</h1>
+      <div class="status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connecting...</span>
+      </div>
+    </div>
+
+    <div class="main">
+      <!-- Setup Card -->
+      <div class="card" id="setupCard">
+        <div class="section-title">Your Name</div>
+        <div class="input-group">
+          <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20">
+        </div>
+
+        <div style="margin-top: 16px;">
+          <button class="btn btn-primary" id="createRoomBtn">Create Room</button>
+        </div>
+
+        <div style="margin-top: 20px;">
+          <div class="section-title">Or Join a Room</div>
+          <div class="input-group">
+            <input type="text" id="roomCodeInput" placeholder="Room code" maxlength="4"
+              style="text-transform: uppercase; letter-spacing: 4px; text-align: center; font-weight: 700; font-size: 18px;">
+            <button class="btn btn-primary btn-sm" id="joinRoomBtn">Join</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Room Card -->
+      <div class="card hidden" id="roomCard">
+        <div class="room-display">
+          <div class="room-code" id="roomCodeDisplay">----</div>
+          <div class="room-label">Share this code with friends</div>
+          <div><span class="role-badge" id="roleBadge">Listener</span></div>
+          <div class="member-count" id="memberCount">1 connected</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-secondary btn-sm hidden" id="takeDjBtn">Become DJ</button>
+          <button class="btn btn-danger btn-sm" id="leaveRoomBtn">Leave Room</button>
+        </div>
+      </div>
+
+      <!-- Player Card -->
+      <div class="card hidden" id="playerCard">
+        <div class="player-section">
+          <div class="player-wrapper">
+            <div id="ytplayer"></div>
+            <div class="player-placeholder" id="playerPlaceholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <span>Paste a YouTube URL to start</span>
+            </div>
+          </div>
+
+          <div class="url-input-section" id="urlInputSection">
+            <div class="input-group">
+              <input type="text" id="videoUrlInput" placeholder="Paste YouTube URL...">
+              <button class="btn btn-primary btn-sm" id="loadVideoBtn">Play</button>
+            </div>
+          </div>
+
+          <div class="now-playing hidden" id="nowPlaying">
+            <span>Now playing:</span>
+            <span class="title" id="nowPlayingTitle">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    const STATES = { SETUP: "setup", ROOM: "room" };
+    let state = STATES.SETUP;
+    let ws = null;
+    let player = null;
+    let isDj = false;
+    let ignorePlayerEvents = false;
+    let syncInterval = null;
+    let playerReady = false;
+
+    const $ = (id) => document.getElementById(id);
+
+    // --- WebSocket ---
+
+    function connectWS() {
+      const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+      const url = `${protocol}//${location.host}`;
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        $("statusDot").classList.add("connected");
+        $("statusText").textContent = "Connected";
+      };
+
+      ws.onclose = () => {
+        $("statusDot").classList.remove("connected");
+        $("statusText").textContent = "Reconnecting...";
+        setTimeout(connectWS, 2000);
+      };
+
+      ws.onerror = () => ws.close();
+
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        handleMessage(msg);
+      };
+    }
+
+    function send(msg) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(msg));
+      }
+    }
+
+    // --- Message handling ---
+
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case "room-created":
+          enterRoom(msg.code, true);
+          break;
+
+        case "room-joined":
+          enterRoom(msg.code, false);
+          break;
+
+        case "error":
+          showToast(msg.message);
+          break;
+
+        case "promoted-to-dj":
+          isDj = true;
+          updateRoomUI();
+          showToast("You are now the DJ");
+          break;
+
+        case "demoted-from-dj":
+          isDj = false;
+          updateRoomUI();
+          showToast("You are now a listener");
+          break;
+
+        case "member-joined":
+          $("memberCount").textContent = `${msg.count} connected`;
+          showToast(`${msg.name} joined`);
+          break;
+
+        case "member-left":
+          $("memberCount").textContent = `${msg.count} connected`;
+          showToast(`${msg.name} left`);
+          break;
+
+        case "dj-left":
+          showToast("DJ left the room");
+          break;
+
+        case "new-dj":
+          showToast(`${msg.name} is now the DJ`);
+          break;
+
+        case "sync":
+          applySync(msg);
+          break;
+
+        case "play":
+          if (!isDj && player && playerReady) {
+            ignorePlayerEvents = true;
+            if (msg.currentTime != null) player.seekTo(msg.currentTime, true);
+            player.playVideo();
+            setTimeout(() => ignorePlayerEvents = false, 1000);
+          }
+          break;
+
+        case "pause":
+          if (!isDj && player && playerReady) {
+            ignorePlayerEvents = true;
+            if (msg.currentTime != null) player.seekTo(msg.currentTime, true);
+            player.pauseVideo();
+            setTimeout(() => ignorePlayerEvents = false, 1000);
+          }
+          break;
+
+        case "seek":
+          if (!isDj && player && playerReady) {
+            ignorePlayerEvents = true;
+            player.seekTo(msg.currentTime, true);
+            setTimeout(() => ignorePlayerEvents = false, 1000);
+          }
+          break;
+
+        case "change-video":
+          if (!isDj && msg.videoId) {
+            loadVideo(msg.videoId);
+            if (msg.title) {
+              $("nowPlayingTitle").textContent = msg.title;
+              $("nowPlaying").classList.remove("hidden");
+            }
+          }
+          break;
+      }
+    }
+
+    function applySync(msg) {
+      if (isDj) return;
+      if (!player || !playerReady) return;
+      if (!msg.videoId) return;
+
+      const currentVideoUrl = player.getVideoUrl && player.getVideoUrl();
+      const currentId = currentVideoUrl ? extractVideoId(currentVideoUrl) : null;
+
+      if (msg.videoId !== currentId) {
+        loadVideo(msg.videoId);
+      } else {
+        const currentTime = player.getCurrentTime();
+        const networkDelay = msg.timestamp ? (Date.now() - msg.timestamp) / 1000 : 0;
+        const targetTime = msg.currentTime + networkDelay;
+        const drift = Math.abs(currentTime - targetTime);
+
+        if (drift > 2) {
+          ignorePlayerEvents = true;
+          player.seekTo(targetTime, true);
+          setTimeout(() => ignorePlayerEvents = false, 1000);
+        }
+
+        const playerState = player.getPlayerState();
+        if (msg.playing && playerState !== 1) {
+          player.playVideo();
+        } else if (!msg.playing && playerState === 1) {
+          player.pauseVideo();
+        }
+      }
+
+      if (msg.title) {
+        $("nowPlayingTitle").textContent = msg.title;
+        $("nowPlaying").classList.remove("hidden");
+      }
+    }
+
+    // --- YouTube Player ---
+
+    let ytAPIReady = false;
+
+    function initYouTubeAPI() {
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+    }
+
+    window.onYouTubeIframeAPIReady = () => {
+      ytAPIReady = true;
+      if (!$("playerCard").classList.contains("hidden")) {
+        createPlayer();
+      }
+    };
+
+    function createPlayer() {
+      if (player || !ytAPIReady) return;
+      player = new YT.Player("ytplayer", {
+        height: "100%",
+        width: "100%",
+        playerVars: {
+          autoplay: 0,
+          controls: 1,
+          rel: 0,
+          modestbranding: 1,
+          playsinline: 1,
+          origin: location.origin,
+        },
+        events: {
+          onReady: () => { playerReady = true; },
+          onStateChange: onPlayerStateChange,
+          onError: (e) => { showToast("YouTube error: " + e.data); },
+        },
+      });
+    }
+
+    function onPlayerStateChange(event) {
+      if (ignorePlayerEvents || !isDj) return;
+
+      const time = player.getCurrentTime();
+      switch (event.data) {
+        case YT.PlayerState.PLAYING:
+          send({ type: "play", currentTime: time });
+          break;
+        case YT.PlayerState.PAUSED:
+          send({ type: "pause", currentTime: time });
+          break;
+      }
+    }
+
+    let lastSentTime = 0;
+    function startSyncBroadcast() {
+      if (syncInterval) clearInterval(syncInterval);
+      syncInterval = setInterval(() => {
+        if (!isDj || !player || !playerReady) return;
+        const videoUrl = player.getVideoUrl();
+        const videoId = videoUrl ? extractVideoId(videoUrl) : null;
+        if (!videoId) return;
+
+        send({
+          type: "sync",
+          videoId,
+          currentTime: player.getCurrentTime(),
+          playing: player.getPlayerState() === YT.PlayerState.PLAYING,
+          title: player.getVideoData().title || "",
+        });
+      }, 3000);
+    }
+
+    let pendingVideoId = null;
+
+    function loadVideo(videoId) {
+      $("playerPlaceholder").classList.add("hidden");
+      if (!player || !playerReady) {
+        pendingVideoId = videoId;
+        const waitForPlayer = setInterval(() => {
+          if (playerReady && player) {
+            clearInterval(waitForPlayer);
+            ignorePlayerEvents = true;
+            player.loadVideoById(pendingVideoId);
+            pendingVideoId = null;
+            setTimeout(() => ignorePlayerEvents = false, 1500);
+          }
+        }, 500);
+        return;
+      }
+      ignorePlayerEvents = true;
+      player.loadVideoById(videoId);
+      setTimeout(() => ignorePlayerEvents = false, 1500);
+    }
+
+    function extractVideoId(url) {
+      try {
+        const u = new URL(url);
+        if (u.hostname.includes("youtu.be")) return u.pathname.slice(1);
+        return u.searchParams.get("v");
+      } catch {
+        if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
+        return null;
+      }
+    }
+
+    // --- UI ---
+
+    function enterRoom(code, asDj) {
+      isDj = asDj;
+      $("setupCard").classList.add("hidden");
+      $("roomCard").classList.remove("hidden");
+      $("playerCard").classList.remove("hidden");
+      $("roomCodeDisplay").textContent = code;
+      updateRoomUI();
+
+      if (!player) createPlayer();
+      startSyncBroadcast();
+
+      if (!asDj) {
+        setTimeout(() => send({ type: "request-sync" }), 1500);
+      }
+    }
+
+    function updateRoomUI() {
+      const badge = $("roleBadge");
+      if (isDj) {
+        badge.textContent = "DJ";
+        badge.className = "role-badge dj";
+        $("takeDjBtn").classList.add("hidden");
+        $("urlInputSection").classList.remove("hidden");
+      } else {
+        badge.textContent = "Listener";
+        badge.className = "role-badge listener";
+        $("takeDjBtn").classList.remove("hidden");
+        $("urlInputSection").classList.add("hidden");
+      }
+    }
+
+    function leaveRoom() {
+      $("setupCard").classList.remove("hidden");
+      $("roomCard").classList.add("hidden");
+      $("playerCard").classList.add("hidden");
+      $("nowPlaying").classList.add("hidden");
+      isDj = false;
+      if (syncInterval) clearInterval(syncInterval);
+      if (ws) ws.close();
+      setTimeout(connectWS, 500);
+    }
+
+    function showToast(message) {
+      const container = $("toastContainer");
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    // --- Event listeners ---
+
+    $("createRoomBtn").addEventListener("click", () => {
+      const name = $("nameInput").value.trim() || "DJ";
+      localStorage.setItem("yt-sync-name", name);
+      send({ type: "create-room", name });
+    });
+
+    $("joinRoomBtn").addEventListener("click", () => {
+      const code = $("roomCodeInput").value.trim().toUpperCase();
+      if (code.length !== 4) {
+        showToast("Enter a 4-character room code");
+        return;
+      }
+      const name = $("nameInput").value.trim() || "Listener";
+      localStorage.setItem("yt-sync-name", name);
+      send({ type: "join-room", code, name });
+    });
+
+    $("roomCodeInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") $("joinRoomBtn").click();
+    });
+
+    $("takeDjBtn").addEventListener("click", () => send({ type: "take-dj" }));
+    $("leaveRoomBtn").addEventListener("click", leaveRoom);
+
+    $("loadVideoBtn").addEventListener("click", () => {
+      const url = $("videoUrlInput").value.trim();
+      const videoId = extractVideoId(url);
+      if (!videoId) {
+        showToast("Invalid YouTube URL");
+        return;
+      }
+      loadVideo(videoId);
+      $("videoUrlInput").value = "";
+      $("playerPlaceholder").classList.add("hidden");
+
+      const title = url;
+      send({ type: "change-video", videoId, videoUrl: url, title });
+    });
+
+    $("videoUrlInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") $("loadVideoBtn").click();
+    });
+
+    // --- Init ---
+
+    const savedName = localStorage.getItem("yt-sync-name");
+    if (savedName) $("nameInput").value = savedName;
+
+    initYouTubeAPI();
+    connectWS();
+  </script>
+</body>
+</html>

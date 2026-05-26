@@ -1,8 +1,18 @@
 const { WebSocketServer } = require("ws");
 const http = require("http");
+const fs = require("fs");
+const path = require("path");
 const os = require("os");
 
 const PORT = process.env.PORT || 3000;
+
+const MIME_TYPES = {
+  ".html": "text/html",
+  ".js": "application/javascript",
+  ".css": "text/css",
+  ".png": "image/png",
+  ".json": "application/json",
+};
 
 const server = http.createServer((req, res) => {
   if (req.url === "/health") {
@@ -10,8 +20,20 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ status: "ok", rooms: rooms.size }));
     return;
   }
-  res.writeHead(404);
-  res.end();
+
+  let filePath = path.join(__dirname, "public", req.url === "/" ? "index.html" : req.url);
+  const ext = path.extname(filePath);
+  const contentType = MIME_TYPES[ext] || "application/octet-stream";
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(404);
+      res.end("Not found");
+      return;
+    }
+    res.writeHead(200, { "Content-Type": contentType });
+    res.end(data);
+  });
 });
 
 const wss = new WebSocketServer({ server });
@@ -145,7 +167,6 @@ wss.on("connection", (ws) => {
           currentTime: msg.currentTime,
           playing: msg.playing,
           timestamp: Date.now(),
-          videoUrl: msg.videoUrl,
           title: msg.title,
         };
 
@@ -170,7 +191,6 @@ wss.on("connection", (ws) => {
           currentTime: 0,
           playing: true,
           timestamp: Date.now(),
-          videoUrl: msg.videoUrl,
           title: msg.title,
         };
         broadcast(room, { type: "change-video", ...room.state }, ws);
@@ -218,8 +238,8 @@ function getLocalIP() {
 
 server.listen(PORT, "0.0.0.0", () => {
   const ip = getLocalIP();
-  console.log(`YouTube Sync server running on:`);
-  console.log(`  Local:   ws://localhost:${PORT}`);
-  console.log(`  Network: ws://${ip}:${PORT}`);
-  console.log(`\nShare the Network URL with other devices on your WiFi.`);
+  console.log(`\nYT Sync is running!\n`);
+  console.log(`  Open on this device:  http://localhost:${PORT}`);
+  console.log(`  Open on other devices: http://${ip}:${PORT}`);
+  console.log(`\nAll devices must be on the same WiFi network.\n`);
 });
