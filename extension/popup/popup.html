@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 16px;
+      text-align: center;
+      border-bottom: 1px solid #e94560;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #e94560;
+      letter-spacing: 0.5px;
+    }
+
+    .header .subtitle {
+      font-size: 11px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: #1a1a2e;
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #e94560;
+    }
+
+    .status-dot.connected {
+      background: #0cce6b;
+    }
+
+    .content {
+      padding: 16px;
+    }
+
+    .section {
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    input, button {
+      font-family: inherit;
+      font-size: 14px;
+      border: none;
+      outline: none;
+      border-radius: 8px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      border: 1px solid #2a2a4a;
+    }
+
+    input:focus {
+      border-color: #e94560;
+    }
+
+    input::placeholder {
+      color: #555;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #e94560;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #d63851;
+    }
+
+    .btn-secondary {
+      background: #1a1a2e;
+      color: #e94560;
+      border: 1px solid #e94560;
+      margin-top: 8px;
+    }
+
+    .btn-secondary:hover {
+      background: #2a1a2e;
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: #e94560;
+      border: 1px solid #333;
+      margin-top: 8px;
+    }
+
+    .room-code {
+      text-align: center;
+      padding: 16px;
+      background: #1a1a2e;
+      border-radius: 12px;
+      border: 1px solid #2a2a4a;
+    }
+
+    .room-code .code {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: 6px;
+      color: #e94560;
+      font-family: "SF Mono", monospace;
+    }
+
+    .room-code .label {
+      font-size: 11px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .role-badge.dj {
+      background: #e94560;
+      color: white;
+    }
+
+    .role-badge.listener {
+      background: #2a2a4a;
+      color: #aaa;
+    }
+
+    .member-count {
+      text-align: center;
+      font-size: 13px;
+      color: #888;
+      margin-top: 8px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .input-row input {
+      flex: 1;
+    }
+
+    .input-row .btn {
+      width: auto;
+      padding: 10px 16px;
+      white-space: nowrap;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      border: 1px solid #e94560;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>YT Sync</h1>
+    <div class="subtitle">Listen together on your WiFi</div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Disconnected</span>
+  </div>
+
+  <div class="content">
+    <!-- Connect Section -->
+    <div id="connectSection">
+      <div class="section">
+        <div class="section-title">Server</div>
+        <input type="text" id="serverUrl" value="ws://localhost:3000" placeholder="ws://192.168.x.x:3000">
+      </div>
+
+      <div class="section">
+        <div class="section-title">Your Name</div>
+        <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20">
+      </div>
+
+      <button class="btn btn-primary" id="connectBtn">Connect</button>
+    </div>
+
+    <!-- Lobby Section -->
+    <div id="lobbySection" class="hidden">
+      <div class="section">
+        <button class="btn btn-primary" id="createRoomBtn">Create Room</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Join Existing Room</div>
+        <div class="input-row">
+          <input type="text" id="roomCodeInput" placeholder="Room code" maxlength="4" style="text-transform: uppercase; letter-spacing: 3px; text-align: center; font-weight: 700;">
+          <button class="btn btn-primary" id="joinRoomBtn">Join</button>
+        </div>
+      </div>
+
+      <button class="btn btn-danger" id="disconnectBtn">Disconnect</button>
+    </div>
+
+    <!-- Room Section -->
+    <div id="roomSection" class="hidden">
+      <div class="room-code">
+        <div class="code" id="roomCodeDisplay">----</div>
+        <div class="label">Share this code with friends</div>
+        <div>
+          <span class="role-badge" id="roleBadge">Listener</span>
+        </div>
+        <div class="member-count" id="memberCount">1 connected</div>
+      </div>
+
+      <button class="btn btn-secondary hidden" id="takeDjBtn">Become DJ</button>
+      <button class="btn btn-danger" id="leaveRoomBtn">Leave Room</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
